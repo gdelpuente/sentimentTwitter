@@ -8,6 +8,7 @@ import org.neo4j.driver.v1.*;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.List;
 
 public class Main {
@@ -18,18 +19,21 @@ public class Main {
     private static final String [] QUERY = {"giannilettieri"};
 
     public static void main(String[] args) {
+
         /*Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
         Session session = driver.session();
         session.close();
         driver.close();
         loadDictionary();*/
+        System.out.println(new Timestamp(new java.util.Date().getTime()));
         loadTweets();
+        System.out.println(new Timestamp(new java.util.Date().getTime()));
         System.out.println("Loaded Tweets");
         digest();
+        System.out.println(new Timestamp(new java.util.Date().getTime()));
         System.out.println("digest terminated");
-        createTemp();
-        System.out.println("Temp link created");
         sentiment();
+        System.out.println(new Timestamp(new java.util.Date().getTime()));
         System.out.println("The end");
 
     }
@@ -42,23 +46,11 @@ public class Main {
                 "WITH n, replace(replace(tolower(n.Text),'.',''),',','') as normalized "+
                 "WITH n, [w in split(normalized,' ') | trim(w)] as words "+
                 "UNWIND words as word " +
-                "CREATE (tw:TweetWords {word:word}) " +
-                "WITH n, tw " +
-                "CREATE (tw)-[r:IN_TWEET]->(n) " +
+                "MERGE (w:Word {word:word}) " +
+                "WITH n, w " +
+                "CREATE (w)-[r:IN_TWEET]->(n) " +
                 "WITH count(r) as wordCount, n " +
                 "SET n.wordCount = wordCount;");
-        session.close();
-        driver.close();
-    }
-
-    private static void createTemp(){
-        Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
-        Session session = driver.session();
-        session.run( "MATCH (n:Tweet)-[:IN_TWEET]-(TweetWord) " +
-                "WITH distinct TweetWord " +
-                "MATCH  (wordSentiment:Word) " +
-                "WHERE TweetWord.word = wordSentiment.word AND (wordSentiment)-[:Sentiment]->(:Sentiment) " +
-                "MERGE (TweetWord)-[:TEMP]->(wordSentiment);");
         session.close();
         driver.close();
     }
@@ -66,33 +58,30 @@ public class Main {
     private static void sentiment(){
         Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
         Session session = driver.session();
-        session.run( "MATCH (n:Tweet)-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
-                "OPTIONAL MATCH pos = (n:Tweet)-[:IN_TWEET]-(TweetWord)-[:TEMP]-(word)-[:Sentiment]-(:Sentiment {name:'Positive'}) " +
+        session.run( "MATCH (n:Tweet)<-[rr:IN_TWEET]-(w)-[:Sentiment]->(:Sentiment) " +
+                "OPTIONAL MATCH pos = (n:Tweet)<-[:IN_TWEET]-(w)-[:Sentiment]->(:Sentiment {name:'Positive'}) " +
                 "WITH n, toFloat(count(pos)) as plus " +
-                "OPTIONAL MATCH neg = (n:Tweet)-[:IN_TWEET]-(TweetWord)-[:TEMP]-(word)-[:Sentiment]-(:Sentiment {name:'Negative'}) " +
-                "WITH ((plus - COUNT(neg))/n.wordCount) as score, n " +
+                "OPTIONAL MATCH neg = (n:Tweet)<-[:IN_TWEET]-(w)-[:Sentiment]->(:Sentiment {name:'Negative'}) " +
+                "WITH ((plus - toFloat(count(neg)))/n.wordCount) as score, n " +
                 "SET n.sentimentScore = score;");
         session.close();
 
         Session session1 = driver.session();
-        session1.run( "MATCH (n:Tweet)-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
+        session1.run( "MATCH (n:Tweet) " +//<-[rr:IN_TWEET]-(w)-[:Sentiment]->(:Sentiment) " +
                 "WHERE n.sentimentScore >= (.01) " +
-                "SET n.sentiment = 'positive', n.analyzed = TRUE "+
-                "DELETE w, r, rr; " );
+                "SET n.sentiment = 'positive', n.analyzed = TRUE ");
         session1.close();
 
         Session session2 = driver.session();
-        session2.run("MATCH (n:Tweet)-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
+        session2.run("MATCH (n:Tweet) " +//-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
                 "WHERE n.sentimentScore <= (-.001) " +
-                "SET n.sentiment = 'negative', n.analyzed = TRUE " +
-                "DELETE w, r, rr; ");
+                "SET n.sentiment = 'negative', n.analyzed = TRUE ");
         session2.close();
 
         Session session3 = driver.session();
-        session3.run("MATCH (n:Tweet)-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
+        session3.run("MATCH (n:Tweet) " +//-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
                 "WHERE (.01) > n.sentimentScore > (-.01) " +
-                "SET n.sentiment = 'neutral', n.analyzed =TRUE " +
-                "DELETE w, r, rr;");
+                "SET n.sentiment = 'neutral', n.analyzed =TRUE ");
         session3.close();
 
         driver.close();
