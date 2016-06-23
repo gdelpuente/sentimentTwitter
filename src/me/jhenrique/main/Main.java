@@ -9,6 +9,7 @@ import org.neo4j.driver.v1.*;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 public class Main {
@@ -120,7 +121,7 @@ public class Main {
         TwitterCriteria criteria;
         List<Tweet> tweets;
         Tweet t;
-
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
         /**
          * Twitter Query
          */
@@ -149,7 +150,7 @@ public class Main {
                                 "MERGE (u)-[:Tweeted]->(t);"
                         , Values.parameters("tid",t.getId(),"username","u"+t.getUsername(),
                                 "rt", t.getRetweets(),"fav",t.getFavorites(),"text",t.getText(),"mentions", t.getMentions(),"hashtag",t.getHashtags(),
-                                "date",t.getDate().toString(),"geo",t.getGeo(),"permalink",t.getPermalink()));
+                                "date",format.format(t.getDate()),"geo",t.getGeo(),"permalink",t.getPermalink()));
 
             }
 

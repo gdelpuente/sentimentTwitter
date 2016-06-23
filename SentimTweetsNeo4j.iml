@@ -13,5 +13,6 @@
     <orderEntry type="library" name="org.tmatesoft.sqljet:sqljet:1.1.10" level="project" />
     <orderEntry type="library" name="org.neo4j.driver:neo4j-java-driver:1.0.3" level="project" />
     <orderEntry type="library" name="com.opencsv:opencsv:3.8" level="project" />
+    <orderEntry type="library" name="org.xerial:sqlite-jdbc:3.8.11.2" level="project" />
   </component>
 </module>
