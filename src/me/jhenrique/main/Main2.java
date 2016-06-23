@@ -18,21 +18,25 @@ import java.util.ArrayList;
 public class Main2 {
 
     public static void main(String[] args) {
-        ArrayList<String> tweets = readTweets();
-        for(String tweet : tweets){
+        ArrayList<myTweet> tweets = readTweets();
+        for(myTweet tweet : tweets){
             System.out.println(""+sentiment(tweet));
         }
     }
 
-    private static ArrayList<String> readTweets(){
-        ArrayList<String> tweets = new ArrayList<>();
+    private static ArrayList<myTweet> readTweets(){
+        ArrayList<myTweet> tweets = new ArrayList<>();
 
         Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
         Session session = driver.session();
-        StatementResult result = session.run( "MATCH (n:Tweet) RETURN n.Text AS text LIMIT 10" );
+        StatementResult result = session.run( "MATCH (n:Tweet) RETURN n.Text AS text, n.Fav as fav, n.RT as rt LIMIT 10" );
             while ( result.hasNext() ){
                 Record record = result.next();
-                tweets.add(record.get( "text" ).asString());
+                myTweet t= new myTweet();
+                t.text = record.get( "text" ).asString();
+                t.fav = record.get( "fav" ).asInt();
+                t.rt = record.get( "rt" ).asInt();
+                tweets.add(t);
             }
 
         session.close();
@@ -40,15 +44,16 @@ public class Main2 {
         return tweets;
     }
 
-    private static int sentiment(String t){
+    private static int sentiment(myTweet t){
+        String text = t.text;
         int sent=0;
         try {
             Class.forName("org.sqlite.JDBC");
             Connection conn = DriverManager.getConnection("jdbc:sqlite:C:\\Users\\Utente\\Desktop\\dizionario.db");
             java.sql.PreparedStatement stat = conn.prepareStatement("select value from dizionario where word LIKE ? ;");
 
-            String[] result =t.split(" ");
-
+            String[] result =text.split(" ");
+            text.replace(".", "").replace(",", "").replace(";", "").replace(":", "").replace(")", "").replace("(", "").replace("-", "");
             for(String p : result){
                 stat.setString(1, p.toLowerCase());
                 ResultSet rs = stat.executeQuery();
@@ -56,10 +61,10 @@ public class Main2 {
                    String value = rs.getString("value");
                   if(value.equals("P")){
                         sent++;
-                      System.out.println("P ->"+p);
+                      //System.out.println("P ->"+p);
                     }else if(value.equals("N")){
                         sent--;
-                      System.out.println("N ->"+p);
+                      //System.out.println("N ->"+p);
                     }
                 }
                 rs.close();
@@ -68,7 +73,7 @@ public class Main2 {
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-        return sent;
+        return (sent * (t.rt+1))+ (Integer.signum(sent)*t.fav);
     }
 
 }
