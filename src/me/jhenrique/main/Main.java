@@ -40,11 +40,11 @@ public class Main {
         sentiment();
         System.out.println(new Timestamp(new java.util.Date().getTime()));
         System.out.println("The end");*/
-        loadTweets(DEMAGISTRIS);
-        loadTweets(LETTIERI);
-        loadTweets(VALENTE);
-        loadTweets(BRAMBILLA);
-        loadTweets(ELEZIONI);
+        loadTweets(DEMAGISTRIS,1);
+        loadTweets(LETTIERI,2);
+        loadTweets(VALENTE,3);
+        loadTweets(BRAMBILLA,4);
+        loadTweets(ELEZIONI,5);
     }
 
     private static void digest(){
@@ -125,7 +125,7 @@ public class Main {
         }
     }
 
-    private static void loadTweets(String[] THEQUERY){
+    private static void loadTweets(String[] THEQUERY,int cand){
         TwitterCriteria criteria;
         List<Tweet> tweets;
         Tweet t;
@@ -153,12 +153,12 @@ public class Main {
                 t = tweet;
 
                 session.run( "MERGE ( t:Tweet { id:{tid}, name:{username}, RT:{rt}, Fav:{fav}, Text:{text}, mentions:{mentions}," +
-                                " hashtag:{hashtag}, date:{date}, Geo:{geo}, permalink:{permalink}, analyzed:FALSE}) " +
+                                " hashtag:{hashtag}, date:{date}, Geo:{geo}, permalink:{permalink}, analyzed:FALSE, candidato:{cand}}) " +
                                 "MERGE ( u:User {name:{username}}) " +
                                 "MERGE (u)-[:Tweeted]->(t);"
                         , Values.parameters("tid",t.getId(),"username","u"+t.getUsername(),
                                 "rt", t.getRetweets(),"fav",t.getFavorites(),"text",t.getText(),"mentions", t.getMentions(),"hashtag",t.getHashtags(),
-                                "date",format.format(t.getDate()),"geo",t.getGeo(),"permalink",t.getPermalink()));
+                                "date",format.format(t.getDate()),"geo",t.getGeo(),"permalink",t.getPermalink(),"cand",cand));
 
             }
 

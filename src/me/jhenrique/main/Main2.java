@@ -28,18 +28,20 @@ public class Main2 {
         ArrayList<myTweet> tweets = new ArrayList<>();
 
         Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
-        Session session = driver.session();
-        StatementResult result = session.run( "MATCH (n:Tweet) RETURN n.Text AS text, n.Fav as fav, n.RT as rt LIMIT 10" );
-            while ( result.hasNext() ){
+        for(int cand=1; cand<5;cand++) {
+            Session session = driver.session();
+            StatementResult result = session.run("MATCH (n:Tweet) WHERE n.candidato = {cand} RETURN n.Text AS text, n.Fav as fav, n.RT as rt",
+                    Values.parameters("cand", cand));
+            while (result.hasNext()) {
                 Record record = result.next();
-                myTweet t= new myTweet();
-                t.text = record.get( "text" ).asString();
-                t.fav = record.get( "fav" ).asInt();
-                t.rt = record.get( "rt" ).asInt();
+                myTweet t = new myTweet();
+                t.text = record.get("text").asString();
+                t.fav = record.get("fav").asInt();
+                t.rt = record.get("rt").asInt();
                 tweets.add(t);
             }
-
-        session.close();
+            session.close();
+        }
         driver.close();
         return tweets;
     }
