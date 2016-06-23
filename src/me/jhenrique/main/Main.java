@@ -13,11 +13,15 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 
 public class Main {
-    private static final String [] QUERY2 = {"giannilettieri", "mbrambilla69", "ValeriaValente_", "elezioninapoli", "elezioninapoli2016",
+    private static final String [] QUERY = {"giannilettieri", "mbrambilla69", "ValeriaValente_", "elezioninapoli", "elezioninapoli2016",
             "elezioniamministrative2016", "Valentesindaco", "stavotaLettieri", "lettierisindaco",
             "demagistrissindaco", "stalotalettieri", "BrambillaSindaco", "elezionicomunali",
             "Napoliè5stelle", "comunali2016", "comunaliNapoli", "liberiamoNapoli", "napoliVale", "demagistris"};
-    private static final String [] QUERY = {"giannilettieri"};
+    private static final String [] DEMAGISTRIS = {"#demagistris", "@demagistris", "demagistrissindaco", "#dema"};
+    private static final String [] LETTIERI = {"#lettieri", "giannilettieri", "stavotaLettieri", "lettierisindaco","stalotalettieri","liberiamoNapoli"};
+    private static final String [] VALENTE = {"ValeriaValente_", "#valente", "Valentesindaco", "napoliVale"};
+    private static final String [] BRAMBILLA = {"#brambilla", "#BrambillaSindaco", "mbrambilla69", "MatteoBrambillaSindaco","Napoliè5stelle"};
+    private static final String [] ELEZIONI = {"elezioninapoli", "elezioninapoli2016", "elezioniamministrative2016", "comunali2016","comunaliNapoli"};
 
     public static void main(String[] args) {
 
@@ -25,9 +29,9 @@ public class Main {
         Session session = driver.session();
         session.close();
         driver.close();
-        loadDictionary();*/
+        loadDictionary();
         System.out.println(new Timestamp(new java.util.Date().getTime()));
-        loadTweets();
+        loadTweets(QUERY);
         System.out.println(new Timestamp(new java.util.Date().getTime()));
         System.out.println("Loaded Tweets");
         digest();
@@ -35,8 +39,12 @@ public class Main {
         System.out.println("digest terminated");
         sentiment();
         System.out.println(new Timestamp(new java.util.Date().getTime()));
-        System.out.println("The end");
-
+        System.out.println("The end");*/
+        loadTweets(DEMAGISTRIS);
+        loadTweets(LETTIERI);
+        loadTweets(VALENTE);
+        loadTweets(BRAMBILLA);
+        loadTweets(ELEZIONI);
     }
 
     private static void digest(){
@@ -117,7 +125,7 @@ public class Main {
         }
     }
 
-    private static void loadTweets(){
+    private static void loadTweets(String[] THEQUERY){
         TwitterCriteria criteria;
         List<Tweet> tweets;
         Tweet t;
@@ -125,7 +133,7 @@ public class Main {
         /**
          * Twitter Query
          */
-        for (String q : QUERY) {
+        for (String q : THEQUERY) {
             criteria = TwitterCriteria.create()
                     .setQuerySearch(q)
                     .setSince("2016-05-5")
@@ -153,13 +161,6 @@ public class Main {
                                 "date",format.format(t.getDate()),"geo",t.getGeo(),"permalink",t.getPermalink()));
 
             }
-
-             /*StatementResult result = session.run( "MATCH (a:Person) WHERE a.name = 'Arthur' RETURN a.name AS name, a.title AS title" );
-            while ( result.hasNext() )
-            {
-                Record record = result.next();
-                System.out.println( record.get( "title" ).asString() + " " + record.get("name").asString() );
-            }*/
 
             session.close();
             driver.close();
