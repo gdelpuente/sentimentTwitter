@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="org.tmatesoft.sqljet:sqljet:1.1.10" type="repository">
+    <properties maven-id="org.tmatesoft.sqljet:sqljet:1.1.10" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/tmatesoft/sqljet/sqljet/1.1.10/sqljet-1.1.10.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/antlr/antlr-runtime/3.4/antlr-runtime-3.4.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/tmatesoft/sqljet/sqljet/1.1.10/sqljet-1.1.10.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/antlr/antlr-runtime/3.4/antlr-runtime-3.4.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
