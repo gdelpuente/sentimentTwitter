@@ -11,16 +11,90 @@ import java.io.IOException;
 import java.util.List;
 
 public class Main {
-    private static final String [] QUERY = {"giannilettieri", "mbrambilla69", "ValeriaValente_", "elezioninapoli", "elezioninapoli2016",
+    private static final String [] QUERY2 = {"giannilettieri", "mbrambilla69", "ValeriaValente_", "elezioninapoli", "elezioninapoli2016",
             "elezioniamministrative2016", "Valentesindaco", "stavotaLettieri", "lettierisindaco",
             "demagistrissindaco", "stalotalettieri", "BrambillaSindaco", "elezionicomunali",
             "Napoliè5stelle", "comunali2016", "comunaliNapoli", "liberiamoNapoli", "napoliVale", "demagistris"};
+    private static final String [] QUERY = {"giannilettieri"};
 
     public static void main(String[] args) {
-        loadDictionary();
-        //loadTweets();
+        //loadDictionary();
+        loadTweets();
+        System.out.println("Loaded Tweets");
+        digest();
+        System.out.println("digest terminated");
+        createTemp();
+        System.out.println("Temp link created");
+        sentiment();
+        System.out.println("The end");
+
 
     }
+
+    private static void digest(){
+        Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
+        Session session = driver.session();
+        session.run( "MATCH (n:Tweet) " +
+                "WHERE n.analyzed = FALSE " +
+                "WITH n, replace(replace(tolower(n.Text),'.',''),',','') as normalized "+
+                "WITH n, [w in split(normalized,' ') | trim(w)] as words "+
+                "UNWIND words as word " +
+                "CREATE (tw:TweetWords {word:word}) " +
+                "WITH n, tw " +
+                "CREATE (tw)-[r:IN_TWEET]->(n) " +
+                "WITH count(r) as wordCount, n " +
+                "SET n.wordCount = wordCount;");
+        session.close();
+        driver.close();
+    }
+
+    private static void createTemp(){
+        Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
+        Session session = driver.session();
+        session.run( "MATCH (n:Tweet)-[:IN_TWEET]-(TweetWord) " +
+                "WITH distinct TweetWord " +
+                "MATCH  (wordSentiment:Word) " +
+                "WHERE TweetWord.word = wordSentiment.word AND (wordSentiment)-[:Sentiment]-() " +
+                "MERGE (TweetWord)-[:TEMP]->(wordSentiment);");
+        session.close();
+        driver.close();
+    }
+
+    private static void sentiment(){
+        Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
+        Session session = driver.session();
+        session.run( "MATCH (n:Tweet)-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
+                "OPTIONAL MATCH pos = (n:Tweet)-[:IN_TWEET]-(TweetWord)-[:TEMP]-(word)-[:Sentiment]-(:Sentiment {name:'Positive'}) " +
+                "WITH n, toFloat(count(pos)) as plus " +
+                "OPTIONAL MATCH neg = (n:Tweet)-[:IN_TWEET]-(TweetWord)-[:TEMP]-(word)-[:Sentiment]-(:Sentiment {name:'Negative'}) " +
+                "WITH ((plus - COUNT(neg))/n.wordCount) as score, n " +
+                "SET n.sentimentScore = score;");
+        session.close();
+
+        Session session1 = driver.session();
+        session1.run( "MATCH (n:Tweet)-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
+                "WHERE n.sentimentScore >= (.01) " +
+                "SET n.sentiment = 'positive', n.analyzed = TRUE "+
+                "DELETE w, r, rr; " );
+        session1.close();
+
+        Session session2 = driver.session();
+        session2.run("MATCH (n:Tweet)-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
+                "WHERE n.sentimentScore <= (-.001) " +
+                "SET n.sentiment = 'negative', n.analyzed = TRUE " +
+                "DELETE w, r, rr; ");
+        session2.close();
+
+        Session session3 = driver.session();
+        session3.run("MATCH (n:Tweet)-[rr:IN_TWEET]-(w)-[r:TEMP]-(word)-[:Sentiment]-(:Sentiment) " +
+                "WHERE (.01) > n.sentimentScore > (-.01) " +
+                "SET n.sentiment = 'neutral', n.analyzed =TRUE " +
+                "DELETE w, r, rr;");
+        session3.close();
+
+        driver.close();
+    }
+
     private static void loadDictionary(){
         CSVReader reader;
         Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
@@ -62,6 +136,7 @@ public class Main {
             criteria = TwitterCriteria.create()
                     .setQuerySearch(q)
                     .setSince("2016-05-5")
+                    .setMaxTweets(1)
                     .setUntil("2016-06-8");
             tweets = TweetManager.getTweets(criteria);
             System.out.println("N° of tweets for " + q + " = "+ tweets.size());
