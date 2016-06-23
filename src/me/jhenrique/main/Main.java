@@ -18,7 +18,11 @@ public class Main {
     private static final String [] QUERY = {"giannilettieri"};
 
     public static void main(String[] args) {
-        //loadDictionary();
+        /*Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
+        Session session = driver.session();
+        session.close();
+        driver.close();
+        loadDictionary();*/
         loadTweets();
         System.out.println("Loaded Tweets");
         digest();
@@ -27,7 +31,6 @@ public class Main {
         System.out.println("Temp link created");
         sentiment();
         System.out.println("The end");
-
 
     }
 
@@ -54,7 +57,7 @@ public class Main {
         session.run( "MATCH (n:Tweet)-[:IN_TWEET]-(TweetWord) " +
                 "WITH distinct TweetWord " +
                 "MATCH  (wordSentiment:Word) " +
-                "WHERE TweetWord.word = wordSentiment.word AND (wordSentiment)-[:Sentiment]-() " +
+                "WHERE TweetWord.word = wordSentiment.word AND (wordSentiment)-[:Sentiment]->(:Sentiment) " +
                 "MERGE (TweetWord)-[:TEMP]->(wordSentiment);");
         session.close();
         driver.close();
@@ -136,7 +139,6 @@ public class Main {
             criteria = TwitterCriteria.create()
                     .setQuerySearch(q)
                     .setSince("2016-05-5")
-                    .setMaxTweets(1)
                     .setUntil("2016-06-8");
             tweets = TweetManager.getTweets(criteria);
             System.out.println("N° of tweets for " + q + " = "+ tweets.size());
@@ -152,11 +154,11 @@ public class Main {
             for (Tweet tweet : tweets) {
                 t = tweet;
 
-                session.run( "MERGE ( t"+t.getId()+":Tweet { name:{username}, RT:{rt}, Fav:{fav}, Text:{text}, mentions:{mentions}," +
-                                " hashtag:{hashtag}, date:{date}, Geo:{geo}, permalink:{permalink}}) " +
-                                "MERGE ( u"+t.getUsername()+":User {name:{username}}) " +
-                                "MERGE (u"+t.getUsername()+")-[:Tweeted]->(t"+t.getId()+");"
-                        , Values.parameters("tId","t"+t.getId(),"username","u"+t.getUsername(),
+                session.run( "MERGE ( t:Tweet { id:{tid}, name:{username}, RT:{rt}, Fav:{fav}, Text:{text}, mentions:{mentions}," +
+                                " hashtag:{hashtag}, date:{date}, Geo:{geo}, permalink:{permalink}, analyzed:FALSE}) " +
+                                "MERGE ( u:User {name:{username}}) " +
+                                "MERGE (u)-[:Tweeted]->(t);"
+                        , Values.parameters("tid",t.getId(),"username","u"+t.getUsername(),
                                 "rt", t.getRetweets(),"fav",t.getFavorites(),"text",t.getText(),"mentions", t.getMentions(),"hashtag",t.getHashtags(),
                                 "date",t.getDate().toString(),"geo",t.getGeo(),"permalink",t.getPermalink()));
 
