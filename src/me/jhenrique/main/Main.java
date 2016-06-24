@@ -9,7 +9,12 @@ import org.neo4j.driver.v1.*;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Timestamp;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.List;
 
 public class Main {
@@ -32,19 +37,49 @@ public class Main {
         loadDictionary();
         System.out.println(new Timestamp(new java.util.Date().getTime()));
         loadTweets(QUERY);
-        System.out.println(new Timestamp(new java.util.Date().getTime()));
+        loadTweets(DEMAGISTRIS,1);
+        loadTweets(LETTIERI,2);
+        loadTweets(VALENTE,3);
+        loadTweets(BRAMBILLA,4);
+        loadTweets(ELEZIONI,5);
         System.out.println("Loaded Tweets");
+        loadDictionary();*/
+        /*System.out.println(new Timestamp(new java.util.Date().getTime()));
         digest();
         System.out.println(new Timestamp(new java.util.Date().getTime()));
         System.out.println("digest terminated");
         sentiment();
         System.out.println(new Timestamp(new java.util.Date().getTime()));
         System.out.println("The end");*/
-        loadTweets(DEMAGISTRIS,1);
-        loadTweets(LETTIERI,2);
-        loadTweets(VALENTE,3);
-        loadTweets(BRAMBILLA,4);
-        loadTweets(ELEZIONI,5);
+        stampMesure(1);
+    }
+
+    private static void stampMesure(int cand){
+        Driver driver = GraphDatabase.driver( "bolt://localhost", AuthTokens.basic( "neo4j", "guido" ) );
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
+        DateTimeFormatter format2 = DateTimeFormatter.ofPattern("yyyyMMdd");;
+
+        try {
+            Date startDate = format.parse("20160505");
+            Date endDate = format.parse("20160608");
+            LocalDate start = startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate end = endDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+
+            for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+                Session session = driver.session();
+                StatementResult result = session.run("MATCH (n:Tweet {candidato:{cand}, date:{date}}) RETURN sum(n.sentimentScore) as score;",
+                        Values.parameters("cand", cand, "date", date.format(format2)));
+                if(result.hasNext()){
+                    Record record = result.next();
+                    double value = record.get("score").asDouble();
+                    System.out.println(cand + ";" + date + ";" +  value);
+                }
+                session.close();
+            }
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        driver.close();
     }
 
     private static void digest(){
@@ -105,11 +140,11 @@ public class Main {
         session1.close();
         try {
 
-            reader = new CSVReader(new FileReader("C:\\Users\\Utente\\Desktop\\utfPulito.csv"),';');
+            reader = new CSVReader(new FileReader("C:\\Users\\Utente\\Desktop\\dizionPULIT.csv"),';');
             String [] nextLine;
             while ((nextLine = reader.readNext()) != null) {
                 // nextLine[] is an array of values from the line
-                System.out.println(nextLine[0]+" "+nextLine[1]);
+                System.out.println(nextLine[0]);
                 Session session = driver.session();
                 session.run( "MERGE ( w:Word { word:{word} }) WITH w " +
                                 "MATCH (p:Sentiment {name:'Positive'}) MERGE (w)-[:Sentiment  {value: [{pos}] }]->(p) WITH w "+
